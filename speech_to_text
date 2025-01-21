@@ -1,0 +1,113 @@
+!pip install SpeechRecognition gTTS playsound wikipedia googlemaps pyttsx3
+
+import speech_recognition as sr
+from gtts import gTTS
+import playsound
+import os
+import wikipedia
+import webbrowser
+import googlemaps
+from datetime import datetime
+import pyttsx3
+
+# Configurações globais
+wikipedia.set_lang("pt")  # Define o idioma do Wikipedia para português
+API_KEY = "SUA_CHAVE_GOOGLE_MAPS"  # Substitua pela sua chave da API do Google Maps
+
+# Função para transformar fala em texto
+def ouvir_fala():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        recognizer.adjust_for_ambient_noise(source)
+        print("Estou ouvindo...")
+        audio = recognizer.listen(source)
+    try:
+        comando = recognizer.recognize_google(audio, language="pt-BR")
+        print(f"Você disse: {comando}")
+        return comando.lower()
+    except sr.UnknownValueError:
+        print("Não entendi o que você disse.")
+        falar("Desculpe, não consegui entender.")
+        return ""
+    except sr.RequestError:
+        print("Erro ao acessar o serviço de reconhecimento de fala.")
+        falar("Serviço indisponível no momento.")
+        return ""
+
+# Função para transformar texto em fala
+def falar(texto):
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)  # Ajusta a velocidade da fala
+    engine.setProperty('volume', 1.0)  # Ajusta o volume
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[0].id)  # Escolhe uma voz
+    engine.say(texto)
+    engine.runAndWait()
+
+# Função para localizar farmácias próximas
+def localizar_farmacia():
+    gmaps = googlemaps.Client(key=API_KEY)
+    try:
+        location = gmaps.geolocate()
+        latitude = location["location"]["lat"]
+        longitude = location["location"]["lng"]
+        farmacias = gmaps.places_nearby(
+            location=(latitude, longitude), radius=3000, keyword="farmácia"
+        )
+        if farmacias["results"]:
+            falar("Aqui estão algumas farmácias próximas:")
+            for farmacia in farmacias["results"][:3]:
+                nome = farmacia["name"]
+                endereco = farmacia.get("vicinity", "Endereço não disponível")
+                falar(f"{nome}, localizado em {endereco}.")
+        else:
+            falar("Não encontrei farmácias próximas.")
+    except Exception as e:
+        print(f"Erro: {e}")
+        falar("Desculpe, não consegui localizar farmácias no momento.")
+
+# Função principal para processar comandos
+def processar_comando(comando):
+    if "youtube" in comando:
+        falar("O que você quer buscar no YouTube?")
+        busca = ouvir_fala()
+        if busca:
+            url = f"https://www.youtube.com/results?search_query={busca}"
+            webbrowser.open(url)
+            falar(f"Aqui estão os resultados para {busca} no YouTube.")
+    elif "wikipedia" in comando or "procure no wikipedia" in comando or "pesquisar" in comando:
+        falar("O que você quer pesquisar no Wikipedia?")
+        busca = ouvir_fala()
+        if busca:
+            try:
+                # Pesquisa o termo no Wikipedia
+                resultado = wikipedia.summary(busca, sentences=2)
+                falar(f"Segundo o Wikipedia, {resultado}")
+                
+                # Abre o link do Wikipedia no navegador
+                url = f"https://pt.wikipedia.org/wiki/{busca.replace(' ', '_')}"
+                webbrowser.open(url)
+                falar(f"Eu abri o link do Wikipedia para {busca} no navegador.")
+            except wikipedia.DisambiguationError:
+                falar("A pesquisa retornou muitos resultados. Seja mais específico.")
+            except Exception as e:
+                print(f"Erro: {e}")
+                falar("Desculpe, não consegui encontrar informações sobre isso.")
+    elif "farmácia" in comando:
+        localizar_farmacia()
+    elif "horas" in comando or "que horas são" in comando:
+        hora_atual = datetime.now().strftime("%H:%M")
+        falar(f"Agora são {hora_atual}.")
+    elif "sair" in comando:
+        falar("Até mais!")
+        exit()
+    else:
+        falar("Desculpe, não reconheço esse comando.")
+
+# Loop principal
+if __name__ == "__main__":
+    falar("Assistente virtual iniciado. Diga um comando.")
+    while True:
+        comando = ouvir_fala()
+        if comando:
+            processar_comando(comando)
