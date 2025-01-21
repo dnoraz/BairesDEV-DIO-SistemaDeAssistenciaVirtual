@@ -1,0 +1,38 @@
+!pip install gTTS googletrans
+
+from gtts import gTTS
+from googletrans import Translator
+from IPython.display import Audio, display
+
+def text_to_speech(text, lang):
+    try:
+        tts = gTTS(text=text, lang=lang)
+        tts.save("output.mp3")
+        display(Audio("output.mp3", autoplay=True))
+        print(f"Áudio reproduzido com sucesso na língua {lang} .")
+    except Exception as e:
+        print(f"Ocorreu um erro: {e}")
+
+def translate_text(text, target_lang):
+    try:
+        translator = Translator()
+        translated = translator.translate(text, dest=target_lang)
+        return translated.text
+    except Exception as e:
+        print(f"Ocorreu um erro durante a tradução: {e}")
+        return text
+
+text = input("Digite o texto que você deseja tranformar em áudio: ")
+
+translated_text = translate_text(text, target_lang='zh-CN')
+text_to_speech(translated_text, lang='zh-CN')
+
+text = input("Digite o texto que você deseja tranformar em áudio: ")
+
+translated_text = translate_text(text, target_lang='en')
+text_to_speech(translated_text, lang='en')
+
+text = input("Digite o texto que você deseja tranformar em áudio: ")
+
+translated_text = translate_text(text, target_lang='es')
+text_to_speech(translated_text, lang='es')
